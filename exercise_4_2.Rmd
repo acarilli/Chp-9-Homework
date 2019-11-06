@@ -1,0 +1,32 @@
+---
+title: "Exercise 4_2"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(janitor)
+library(magrittr)
+library(broom)
+library(AER)
+```
+
+```{r}
+inmates <- read_csv("inmates.csv") %>% 
+  clean_names() %>% 
+  mutate(state = factor(state),
+         year = factor(year)) %>% 
+  select(prison, educ, af_am, age, year, state, ca9, ca10, ca11)
+```
+
+### (d)
+
+```{r part_d}
+inmates %$% 
+  ivreg(prison ~ educ + af_am + age + year + state |
+          ca9 + ca10 + ca11 + af_am + age + year + state) %>% 
+  tidy() %>% 
+  slice(1:4)
+```

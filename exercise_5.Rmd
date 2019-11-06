@@ -1,0 +1,79 @@
+---
+title: "Exercise 5"
+author: "Carilli"
+date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+output: 
+  html_document:
+    theme: cerulean
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE, message = FALSE,
+                      options(digits = 3, scipen = 999))
+library(tidyverse)
+library(janitor)
+library(jtools)
+library(magrittr)
+library(plm)
+library(broom)
+library(kableExtra)
+library(AER)
+library(modelr)
+library(car)
+```
+
+```{r}
+democracy <- read_csv("democracy_income.csv") %>% 
+  clean_names() %>% 
+  mutate(country = factor(country_code),
+         year_order = factor(year_order)) %>% 
+  rename(world_income = worldincome)
+
+```
+
+### (a)
+
+```{r part_a}
+democracy %$% 
+  lm(democracy_fh ~ dplyr::lag(log_gdp, 1)) %>% 
+  summ(digits = 4)
+
+```
+
+### (b)
+
+```{r part_b}
+plm(democracy_fh ~ dplyr::lag(log_gdp, 1) + year_order,
+    data = democracy, index = "country", model = "within") %>% 
+summary
+```
+
+
+### (c)
+
+```{r part_c}
+democracy <- 
+democracy %>% 
+  group_by(country) %>% 
+  mutate(lag_world_income = dplyr::lag(world_income)) %>% 
+  ungroup() %>% 
+  mutate(lag_log_gdp = dplyr::lag(log_gdp, 1))
+
+plm(lag_log_gdp ~ lag_world_income + country + year_order,
+    data = democracy, index = "country", model = "within") %>% 
+  summary()
+```
+
+### (d)
+
+```{r part_d}
+democracy %$% 
+  ivreg(democracy_fh ~ lag_log_gdp + country + year_order | 
+          lag_world_income + country + year_order) %>% 
+  tidy() %>% 
+  slice(1:2)
+```
+
+
+

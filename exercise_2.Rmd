@@ -1,0 +1,82 @@
+---
+title: "Exercise 2"
+author: "Carilli"
+date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+output: 
+  html_document:
+    theme: cerulean
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE, message = FALSE,
+                      options(digits = 3, scipen = 999))
+library(tidyverse)
+library(janitor)
+library(jtools)
+library(magrittr)
+library(plm)
+library(broom)
+library(kableExtra)
+library(AER)
+library(modelr)
+```
+
+```{r}
+news <- read_csv("news_study_MAB.csv") %>% 
+  clean_names() %>% 
+  rename(party_id = partyid) %>% 
+  mutate(read_news = as_factor(read_news),
+         political_interest = as_factor(political_interest),
+         education = as_factor(education),
+         treatment_group = as_factor(treatment_group),
+         watch_program = as_factor(watch_program)
+         ) %>% 
+  select(information_level, read_news, political_interest, education, treatment_group, watch_program)
+
+tv <- read_csv("news.csv") %>% 
+  clean_names()
+```
+
+### (a)
+
+```{r part_a}
+tv %$% 
+  lm(information_level ~ watch_program) %>% 
+  summ(digits = 4)
+```
+
+### (b)
+
+```{r}
+tv %$% 
+  lm(information_level ~ watch_program + 
+       political_interest + read_news + education
+     ) %>% 
+  summ(digits = 4)
+```
+
+### (c)
+
+```{r}
+tv %$% 
+  lm(watch_program ~ treatment_group + 
+       political_interest + read_news + education
+     ) %>% 
+  summ(digits = 4)
+```
+
+### (d)
+
+```{r}
+tv %$% 
+  ivreg(information_level ~ watch_program + 
+          political_interest + read_news + education | 
+          treatment_group + 
+          political_interest + read_news + education
+        ) %>% 
+  summary
+```
+
+### (e)
+

@@ -1,0 +1,91 @@
+---
+title: "Exercise 3"
+author: "Carilli"
+date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+output: 
+  html_document:
+    theme: cerulean
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE, message = FALSE,
+                      options(digits = 3, scipen = 999))
+library(tidyverse)
+library(janitor)
+library(jtools)
+library(magrittr)
+library(plm)
+library(broom)
+library(kableExtra)
+library(AER)
+library(modelr)
+```
+
+```{r}
+fish <- read_csv("fishdata.csv") %>% 
+  clean_names()
+```
+
+### (a)
+
+```{r part_a}
+curve(10*x^(-3/2), xlim = c(0, 10), ylim = c(0,4), 
+      main = "Supply and Demand", xlab = "Quantity", ylab = "Price")
+
+curve(1/3*x^(3/2), xlim = c(0, 10), ylim = c(0,4), 
+      add = TRUE)
+
+curve(20*x^(-3/2), xlim = c(0, 10), ylim = c(0,4), 
+      add = TRUE, col = "red")
+
+segments(y0 = -1, y1 = 10 * 30 ^ (-1/2), x0 = 30^(1/3), x1 = 30^(1/3), lty = 2)
+
+segments(x0 = -1, x1 = 30^(1/3), y0 = 10 * 30 ^ (-1/2), y1 = 10 * 30 ^ (-1/2), lty = 2)
+
+segments(y0 = -1, y1 = 20 * 60 ^ (-1/2), x0 = 60^(1/3), x1 = 60^(1/3), 
+         col ="red", lty = 2)
+
+segments(x0 = -1, x1 = 60^(1/3), y0 = 20 * 60 ^ (-1/2), y1 = 20 * 60 ^ (-1/2), 
+         lty = 2, col = "red")
+
+```
+
+### (b)
+
+```{r}
+fish %$% 
+  lm(qty ~ price) %>% 
+  summ(digits = 4)
+```
+
+### (c)
+
+```{r}
+# First stage results
+fish %$% 
+  lm(price ~ stormy) %>% 
+  summ(digits = 4)
+
+fish %$% 
+  ivreg(qty ~ price | stormy) %>% 
+  summary(digits = 4)
+```
+
+### (d)
+
+```{r}
+# first stage
+fish %$% 
+  lm(price ~ stormy + day1 + day2 + day3 + day4 + rainy + cold) %>% 
+  summ(digits = 4)
+
+fish %$% 
+  ivreg(qty ~ price + day1 + day2 + day3 + day4 + cold + rainy | 
+          stormy + day1 + day2 + day3 + day4 + cold + rainy) %>% 
+  summary()
+
+```
+
+
+
