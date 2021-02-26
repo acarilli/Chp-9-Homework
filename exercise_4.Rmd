@@ -1,39 +1,37 @@
 ---
 title: "Exercise 4"
 author: "Carilli"
-date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+date: '`r format(lubridate::today(), "%B %d, %Y")`'
 output: 
   html_document:
     theme: cerulean
     highlight: tango
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE, message = FALSE,
                       options(digits = 3, scipen = 999))
 library(tidyverse)
-library(janitor)
-library(magrittr)
-library(plm)
-library(broom)
-library(AER)
-library(car)
 ```
 
-```{r}
-inmates <- read_csv("inmates.csv") %>% 
-  clean_names() %>% 
-  mutate(state = factor(state),
-         year = factor(year)) %>%
-   select(prison, educ, af_am, age, year, state, ca9, ca10, ca11)
+```{r 4data}
+inmates <-
+  here::here("data", "inmates.csv") %>%
+  read_csv(col_names = TRUE,
+           cols(state = col_factor(),
+                year = col_factor())) %>%
+  janitor::clean_names() %>%
+  select(prison, educ, af_am, age, year, state, ca9, ca10, ca11) %>% 
+  sample_frac(1/10)
 ```
 
 ### (a)
 
-```{r part_a}
-inmates %$% 
-  lm(prison ~ educ + age + af_am + state + year) %>% 
-  tidy() %>% 
+```{r 4a}
+inmates %>% 
+  lm(prison ~ educ + age + af_am + state + year, data = .) %>% 
+  broom::tidy() %>% 
   slice(1:4)
 ```
 
@@ -41,7 +39,7 @@ inmates %$%
 
 ### (c)
 
-```{r part_c}
+```{r 4c}
 # First stage results
 # inmates %$% 
 #   lm(educ ~ ca9 + ca10 + ca11 + af_am + year + state) %>% 
@@ -49,18 +47,19 @@ inmates %$%
 #   slice(1:4)
 
 # ols_inst <- 
-inmates %$% 
-  lm(educ ~ ca9 + ca10 + ca11 + af_am + year + state) %>% 
-  linearHypothesis(c("ca9", "ca10", "ca11"))
+inmates %>% 
+  lm(educ ~ ca9 + ca10 + ca11 + af_am + year + state, data = .) %>% 
+  car::linearHypothesis(c("ca9", "ca10", "ca11"))
 ```
 
 ### (d)
 
-```{r part_d}
-inmates %$% 
-  ivreg(prison ~ educ + af_am + age + year + state |
-          ca9 + ca10 + ca11 + af_am + age + year + state) %>% 
-  tidy() %>% 
+```{r 4d}
+inmates %>% 
+  AER::ivreg(prison ~ educ + af_am + age + year + state |
+          ca9 + ca10 + ca11 + af_am + age + year + state,
+          data = .) %>% 
+  broom::tidy() %>% 
   slice(1:4)
 ```
 

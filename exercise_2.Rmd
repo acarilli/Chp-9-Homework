@@ -1,7 +1,7 @@
 ---
 title: "Exercise 2"
 author: "Carilli"
-date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+date: '`r format(lubridate::today(), "%B %d, %Y")`'
 output: 
   html_document:
     theme: cerulean
@@ -10,73 +10,106 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE, message = FALSE,
-                      options(digits = 3, scipen = 999))
+                      options(digits = 2, scipen = 999))
 library(tidyverse)
-library(janitor)
-library(jtools)
-library(magrittr)
-library(plm)
-library(broom)
-library(kableExtra)
-library(AER)
-library(modelr)
 ```
 
-```{r}
-news <- read_csv("news_study_MAB.csv") %>% 
-  clean_names() %>% 
-  rename(party_id = partyid) %>% 
-  mutate(read_news = as_factor(read_news),
-         political_interest = as_factor(political_interest),
-         education = as_factor(education),
-         treatment_group = as_factor(treatment_group),
-         watch_program = as_factor(watch_program)
-         ) %>% 
-  select(information_level, read_news, political_interest, education, treatment_group, watch_program)
-
-tv <- read_csv("news.csv") %>% 
-  clean_names()
+```{r 2data}
+news <- 
+  here::here("data", "news_study_MAB.csv") %>% 
+  read_csv(
+    cols(
+      read_news = col_factor(),
+      political_interest = col_factor(),
+      education = col_factor(),
+      treatment_group = col_factor(),
+      watch_program = col_factor()
+    ),
+    col_names = TRUE
+  ) %>% 
+  janitor::clean_names() %>% 
+  select(
+    read_news, political_interest, education,
+    treatment_group, watch_program, information_level,
+    income, female
+    )
+    
+tv <- 
+  here::here("data", "news.csv") %>% 
+  read_csv() %>% 
+  janitor::clean_names()
 ```
 
-### (a)
+## (a)
 
-```{r part_a}
-tv %$% 
-  lm(information_level ~ watch_program) %>% 
-  summ(digits = 4)
+```{r 2a}
+tv %>% 
+  lm(information_level ~ watch_program, .) %>% 
+  jtools::summ(digits = 4)
+
+news %>% 
+  lm(information_level ~ watch_program, .) %>% 
+  jtools::summ(digits = 4)
 ```
 
-### (b)
+## (b)
 
-```{r}
-tv %$% 
+```{r 2b}
+tv %>% 
   lm(information_level ~ watch_program + 
-       political_interest + read_news + education
-     ) %>% 
-  summ(digits = 4)
+       political_interest + read_news + education,
+     .) %>% 
+  jtools::summ(digits = 4)
+
+news %>% 
+  lm(information_level ~ watch_program + 
+       political_interest + read_news + education,
+     .) %>% 
+  jtools::summ(digits = 4)
 ```
 
-### (c)
+## (c)
 
-```{r}
-tv %$% 
+```{r 2c}
+tv %>% 
   lm(watch_program ~ treatment_group + 
-       political_interest + read_news + education
+       political_interest + read_news + education,
+     data = .
      ) %>% 
-  summ(digits = 4)
+  jtools::summ(digits = 4)
+
+news %>% 
+  mutate(treatment_group = ifelse(treatment_group == 0, "control", treatment_group),
+         watch_program = ifelse(watch_program == "yes", 1, 0)) %>% 
+  lm(watch_program ~ treatment_group + 
+       political_interest + read_news + education,
+     data = .
+     ) %>% 
+  jtools::summ(digits = 4)
 ```
 
-### (d)
+## (d)
 
-```{r}
-tv %$% 
-  ivreg(information_level ~ watch_program + 
+```{r 2d}
+options(digits = 2)
+tv %>% 
+  AER::ivreg(information_level ~ watch_program + 
           political_interest + read_news + education | 
           treatment_group + 
-          political_interest + read_news + education
+          political_interest + read_news + education,
+        data = .
+        ) %>% 
+  summary
+
+news %>% 
+  AER::ivreg(information_level ~ watch_program + 
+          political_interest + read_news + education | 
+          treatment_group + 
+          political_interest + read_news + education,
+        data = .
         ) %>% 
   summary
 ```
 
-### (e)
+## (e)
 

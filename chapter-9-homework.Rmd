@@ -1,0 +1,414 @@
+---
+title: "Chapter 9 Homework"
+author: "Carilli"
+date: '`r format(lubridate::today(), "%B %d, %Y")`'
+output: 
+  html_document:
+    toc: false
+    toc_float: false
+    df_print: paged
+    theme: cerulean
+    highlight: tango
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA, message = FALSE, warning = FALSE,
+                      options(digits = 3, scipen = 999))
+library(tidyverse)
+```
+
+# Exercises {.tabset}
+
+## Exercise 1 {.tabset}
+
+```{r 1data}
+rain <- 
+  here::here("data", "RainIV.csv") %>% 
+  read_csv() %>% 
+  janitor::clean_names() 
+```
+
+### (a)
+
+```{r 1a}
+rain %>% 
+  lm(internal_conflict ~ lagged_gdp_growth, .) %>% 
+  jtools::summ(digits = 4)
+```
+
+### (b)
+
+```{r 1b}
+rain %>%
+  lm(
+    internal_conflict ~ lagged_gdp_growth +
+      initial_gdp + democracy + mountains + ethnic_frac + religious_frac,
+    .
+  ) %>%
+  jtools::summ(digits = 4)
+```
+
+### (c)
+
+```{r 1c}
+rain %>% 
+  lm(lagged_gdp_growth ~ lagged_rainfall_growth + 
+       initial_gdp + democracy + mountains + ethnic_frac + religious_frac, .) %>% 
+  jtools::summ(digits = 4)
+```
+
+### (d)
+
+
+### (e)
+
+```{r 1e}
+rain %>% 
+  AER::ivreg(internal_conflict ~ lagged_gdp_growth + 
+          initial_gdp + democracy + mountains + ethnic_frac + religious_frac |
+          lagged_rainfall_growth + 
+          initial_gdp + democracy + mountains + ethnic_frac + religious_frac, 
+        data = .  
+        ) %>% 
+  summary()
+```
+
+### (f)
+
+```{r 1f}
+rain %>%
+  AER::ivreg(
+    internal_conflict ~ lagged_gdp_growth + initial_gdp + democracy + mountains +
+      ethnic_frac + religious_frac + country_code |
+      lagged_rainfall_growth +
+      initial_gdp + democracy + mountains + ethnic_frac + religious_frac + country_code,
+    data = .
+  ) %>%
+  summary()
+```
+
+### (g)
+
+```{r 1g}
+
+## Two ways to add residual to the data frame 
+
+# With the augment from the broom package
+
+rain$residual <- 
+rain %>% 
+  lm(lagged_gdp_growth ~ lagged_rainfall_growth + 
+       initial_gdp + democracy + mountains + ethnic_frac +
+       religious_frac + country_code, 
+     data = .) %>% 
+  broom::augment() %>% 
+  pull(.resid)
+
+# With add_residuals from the modelr package
+
+# mod <- 
+rain %>% 
+  lm(lagged_gdp_growth ~ lagged_rainfall_growth + 
+       initial_gdp + democracy + mountains + ethnic_frac + 
+       religious_frac + country_code,
+     data = .) %>% 
+  modelr::add_residuals(model = ., data = rain) %>% 
+  lm(internal_conflict ~ lagged_gdp_growth + 
+       initial_gdp + democracy + mountains + ethnic_frac + 
+       religious_frac + country_code + resid,
+     data = .) %>% 
+  jtools::summ(digits = 4)
+
+
+# rain <- rain %>%  
+#   modelr::add_residuals(mod)
+# 
+# rain %$% 
+#   lm(internal_conflict ~ lagged_gdp_growth + 
+#           initial_gdp + democracy + mountains + ethnic_frac + religious_frac + country_code + 
+#        resid) %>% 
+#   summ(digits = 4)
+
+```
+
+## Exercise 2 {.tabset}
+
+```{r 2data}
+news <- 
+  here::here("data", "news_study_MAB.csv") %>% 
+  read_csv(
+    cols(
+      read_news = col_factor(),
+      political_interest = col_factor(),
+      education = col_factor(),
+      treatment_group = col_factor(),
+      watch_program = col_factor()
+    ),
+    col_names = TRUE
+  ) %>% 
+  janitor::clean_names() %>% 
+  select(
+    read_news, political_interest, education,
+    treatment_group, watch_program, information_level,
+    income, female
+    )
+    
+tv <- 
+  here::here("data", "news.csv") %>% 
+  read_csv() %>% 
+  janitor::clean_names()
+```
+
+### (a)
+
+```{r 2a}
+tv %>% 
+  lm(information_level ~ watch_program, .) %>% 
+  jtools::summ(digits = 4)
+
+news %>% 
+  lm(information_level ~ watch_program, .) %>% 
+  jtools::summ(digits = 4)
+```
+
+### (b)
+
+```{r 2b}
+tv %>% 
+  lm(information_level ~ watch_program + 
+       political_interest + read_news + education,
+     .) %>% 
+  jtools::summ(digits = 4)
+
+news %>% 
+  lm(information_level ~ watch_program + 
+       political_interest + read_news + education,
+     .) %>% 
+  jtools::summ(digits = 4)
+```
+
+### (c)
+
+```{r 2c}
+tv %>% 
+  lm(watch_program ~ treatment_group + 
+       political_interest + read_news + education,
+     data = .
+     ) %>% 
+  jtools::summ(digits = 4)
+
+news %>% 
+  mutate(treatment_group = ifelse(treatment_group == 0, "control", treatment_group),
+         watch_program = ifelse(watch_program == "yes", 1, 0)) %>% 
+  lm(watch_program ~ treatment_group + 
+       political_interest + read_news + education,
+     data = .
+     ) %>% 
+  jtools::summ(digits = 4)
+```
+
+### (d)
+
+```{r 2d}
+options(digits = 2)
+tv %>% 
+  AER::ivreg(information_level ~ watch_program + 
+          political_interest + read_news + education | 
+          treatment_group + 
+          political_interest + read_news + education,
+        data = .
+        ) %>% 
+  summary
+
+news %>% 
+  AER::ivreg(information_level ~ watch_program + 
+          political_interest + read_news + education | 
+          treatment_group + 
+          political_interest + read_news + education,
+        data = .
+        ) %>% 
+  summary
+```
+
+### (e)
+
+
+## Exercise 3 {.tabset}
+```{r 3data}
+fish <- 
+  here::here("data", "fishdata.csv") %>% 
+  read_csv() %>% 
+  janitor::clean_names()
+```
+
+### (a)
+
+```{r 3a}
+curve(10*x^(-3/2), xlim = c(0, 10), ylim = c(0,4), 
+      main = "Supply and Demand", xlab = "Quantity", ylab = "Price")
+
+curve(1/3*x^(3/2), xlim = c(0, 10), ylim = c(0,4), 
+      add = TRUE)
+
+curve(20*x^(-3/2), xlim = c(0, 10), ylim = c(0,4), 
+      add = TRUE, col = "red")
+
+segments(y0 = -1, y1 = 10 * 30 ^ (-1/2), x0 = 30^(1/3), x1 = 30^(1/3), lty = 2)
+
+segments(x0 = -1, x1 = 30^(1/3), y0 = 10 * 30 ^ (-1/2), y1 = 10 * 30 ^ (-1/2), lty = 2)
+
+segments(y0 = -1, y1 = 20 * 60 ^ (-1/2), x0 = 60^(1/3), x1 = 60^(1/3), 
+         col ="red", lty = 2)
+
+segments(x0 = -1, x1 = 60^(1/3), y0 = 20 * 60 ^ (-1/2), y1 = 20 * 60 ^ (-1/2), 
+         lty = 2, col = "red")
+
+```
+
+### (b)
+
+```{r 3b}
+fish %>% 
+  lm(qty ~ price, .) %>% 
+  jtools::summ(digits = 4)
+```
+
+### (c)
+
+```{r 3c}
+# First stage results
+fish %$% 
+  lm(price ~ stormy, .) %>% 
+  jtools::summ(digits = 4)
+
+fish %$% 
+  AER::ivreg(qty ~ price | stormy, data = .) %>% 
+  summary(digits = 4)
+```
+
+### (d)
+
+```{r 3d}
+# first stage
+fish %>% 
+  lm(price ~ stormy + day1 + day2 + day3 + day4 + rainy + cold, .) %>% 
+  jtools::summ(digits = 4)
+
+fish %>% 
+  AER::ivreg(qty ~ price + day1 + day2 + day3 + day4 + cold + rainy | 
+          stormy + day1 + day2 + day3 + day4 + cold + rainy,
+        data = .) %>% 
+  summary()
+
+```
+## Exercise 4 {.tabset}
+```{r 4data}
+inmates <-
+  here::here("data", "inmates.csv") %>%
+  read_csv(col_names = TRUE,
+           cols(state = col_factor(),
+                year = col_factor())) %>%
+  janitor::clean_names() %>%
+  select(prison, educ, af_am, age, year, state, ca9, ca10, ca11) %>% 
+  sample_frac(1/10)
+```
+
+### (a)
+
+```{r 4a}
+inmates %>% 
+  lm(prison ~ educ + age + af_am + state + year, data = .) %>% 
+  broom::tidy() %>% 
+  slice(1:4)
+```
+
+### (b)
+
+### (c)
+
+```{r 4c}
+# First stage results
+# inmates %$% 
+#   lm(educ ~ ca9 + ca10 + ca11 + af_am + year + state) %>% 
+#   tidy() %>% 
+#   slice(1:4)
+
+# ols_inst <- 
+inmates %>% 
+  lm(educ ~ ca9 + ca10 + ca11 + af_am + year + state, data = .) %>% 
+  car::linearHypothesis(c("ca9", "ca10", "ca11"))
+```
+
+### (d)
+
+```{r 4d}
+inmates %>% 
+  AER::ivreg(prison ~ educ + af_am + age + year + state |
+          ca9 + ca10 + ca11 + af_am + age + year + state,
+          data = .) %>% 
+  broom::tidy() %>% 
+  slice(1:4)
+```
+
+## Exercise 5 {.tabset}
+```{r 5data}
+democracy <- 
+  here::here("data", "democracy_income.csv") %>% 
+  read_csv(col_names = TRUE,
+           cols(
+             CountryCode = col_factor(),
+             YearOrder = col_factor()
+           )) %>% 
+  janitor::clean_names() %>% 
+  rename(world_income = worldincome)
+
+```
+
+### (a)
+
+```{r 5a}
+democracy %>% 
+  lm(democracy_fh ~ dplyr::lag(log_gdp, 1), .) %>% 
+  jtools::summ(digits = 4)
+
+```
+
+### (b)
+
+```{r 5b}
+democracy %>% 
+  plm::plm(democracy_fh ~ dplyr::lag(log_gdp, 1) + year_order,
+      data = ., index = "country_code", model = "within") %>% 
+  summary()
+```
+
+
+### (c)
+
+```{r 5c}
+
+democracy %>% 
+  group_by(country_code) %>% 
+  mutate(lag_world_income = dplyr::lag(world_income)) %>% 
+  ungroup() %>% 
+  mutate(lag_log_gdp = dplyr::lag(log_gdp, 1)) %>% 
+  plm::plm(lag_log_gdp ~ lag_world_income + country_code + year_order,
+      data = ., index = "country_code", model = "within") %>% 
+  summary()
+```
+
+### (d)
+
+```{r 5d}
+democracy %>% 
+  group_by(country_code) %>% 
+  mutate(lag_world_income = dplyr::lag(world_income)) %>% 
+  ungroup() %>% 
+  mutate(lag_log_gdp = dplyr::lag(log_gdp, 1)) %>% 
+  AER::ivreg(democracy_fh ~ lag_log_gdp + country_code + year_order | 
+          lag_world_income + country_code + year_order,
+        data = .) %>% 
+  broom::tidy() %>% 
+  slice(1:2)
+```

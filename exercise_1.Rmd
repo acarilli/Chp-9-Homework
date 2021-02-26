@@ -1,56 +1,56 @@
 ---
 title: "Exercise 1"
 author: "Carilli"
-date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+date: '`r format(lubridate::today(), "%B %d, %Y")`'
 output: 
   html_document:
     theme: cerulean
     highlight: tango
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE, message = FALSE,
                       options(digits = 3, scipen = 999))
 library(tidyverse)
-library(janitor)
-library(jtools)
-library(magrittr)
 library(plm)
-library(broom)
-library(kableExtra)
 library(AER)
-library(modelr)
 ```
 
-```{r}
-rain <- read_csv("RainIV.csv") %>% 
-  clean_names() 
+```{r 1data}
+rain <- 
+  here::here("data", "RainIV.csv") %>% 
+  read_csv() %>% 
+  janitor::clean_names() 
 ```
 
 ### (a)
 
-```{r part_a}
-rain %$% 
-  lm(internal_conflict ~ lagged_gdp_growth) %>% 
-  summ(digits = 4)
+```{r 1a}
+rain %>% 
+  lm(internal_conflict ~ lagged_gdp_growth, .) %>% 
+  jtools::summ(digits = 4)
 ```
 
 ### (b)
 
-```{r}
-rain %$% 
-  lm(internal_conflict ~ lagged_gdp_growth + 
-       initial_gdp + democracy + mountains + ethnic_frac + religious_frac) %>% 
-  summ(digits = 4)
+```{r 1b}
+rain %>%
+  lm(
+    internal_conflict ~ lagged_gdp_growth +
+      initial_gdp + democracy + mountains + ethnic_frac + religious_frac,
+    .
+  ) %>%
+  jtools::summ(digits = 4)
 ```
 
 ### (c)
 
-```{r}
-rain %$% 
+```{r 1c}
+rain %>% 
   lm(lagged_gdp_growth ~ lagged_rainfall_growth + 
-       initial_gdp + democracy + mountains + ethnic_frac + religious_frac) %>% 
-  summ(digits = 4)
+       initial_gdp + democracy + mountains + ethnic_frac + religious_frac, .) %>% 
+  jtools::summ(digits = 4)
 ```
 
 ### (d)
@@ -58,56 +58,72 @@ rain %$%
 
 ### (e)
 
-```{r}
-rain %$% 
-  ivreg(internal_conflict ~ lagged_gdp_growth + 
+```{r 1e}
+rain %>% 
+  AER::ivreg(internal_conflict ~ lagged_gdp_growth + 
           initial_gdp + democracy + mountains + ethnic_frac + religious_frac |
           lagged_rainfall_growth + 
-          initial_gdp + democracy + mountains + ethnic_frac + religious_frac  
+          initial_gdp + democracy + mountains + ethnic_frac + religious_frac, 
+        data = .  
         ) %>% 
   summary()
 ```
 
 ### (f)
 
-```{r}
-rain %$% 
-  ivreg(internal_conflict ~ lagged_gdp_growth + 
-          initial_gdp + democracy + mountains + ethnic_frac + religious_frac + country_code |
-          lagged_rainfall_growth + 
-          initial_gdp + democracy + mountains + ethnic_frac + religious_frac + country_code
-        ) %>% 
+```{r 1f}
+rain %>%
+  AER::ivreg(
+    internal_conflict ~ lagged_gdp_growth + initial_gdp + democracy + mountains +
+      ethnic_frac + religious_frac + country_code |
+      lagged_rainfall_growth +
+      initial_gdp + democracy + mountains + ethnic_frac + religious_frac + country_code,
+    data = .
+  ) %>%
   summary()
 ```
 
 ### (g)
 
-```{r}
+```{r 1g}
+
 ## Two ways to add residual to the data frame 
 
 # With the augment from the broom package
 
 rain$residual <- 
-rain %$% 
+rain %>% 
   lm(lagged_gdp_growth ~ lagged_rainfall_growth + 
-          initial_gdp + democracy + mountains + ethnic_frac + religious_frac + country_code) %>% 
-  augment() %>% 
+       initial_gdp + democracy + mountains + ethnic_frac +
+       religious_frac + country_code, 
+     data = .) %>% 
+  broom::augment() %>% 
   pull(.resid)
 
 # With add_residuals from the modelr package
 
-mod <- 
-rain %$% 
+# mod <- 
+rain %>% 
   lm(lagged_gdp_growth ~ lagged_rainfall_growth + 
-          initial_gdp + democracy + mountains + ethnic_frac + religious_frac + country_code)
-rain <- rain %>%  
-  add_residuals(mod)
-
-rain %$% 
+       initial_gdp + democracy + mountains + ethnic_frac + 
+       religious_frac + country_code,
+     data = .) %>% 
+  modelr::add_residuals(model = ., data = rain) %>% 
   lm(internal_conflict ~ lagged_gdp_growth + 
-          initial_gdp + democracy + mountains + ethnic_frac + religious_frac + country_code + 
-       resid) %>% 
-  summ(digits = 4)
+       initial_gdp + democracy + mountains + ethnic_frac + 
+       religious_frac + country_code + resid,
+     data = .) %>% 
+  jtools::summ(digits = 4)
+
+
+# rain <- rain %>%  
+#   modelr::add_residuals(mod)
+# 
+# rain %$% 
+#   lm(internal_conflict ~ lagged_gdp_growth + 
+#           initial_gdp + democracy + mountains + ethnic_frac + religious_frac + country_code + 
+#        resid) %>% 
+#   summ(digits = 4)
 
 ```
 

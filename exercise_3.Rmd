@@ -1,35 +1,30 @@
 ---
 title: "Exercise 3"
 author: "Carilli"
-date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+date: '`r format(lubridate::today(), "%B %d, %Y")`'
 output: 
   html_document:
     theme: cerulean
     highlight: tango
+    df_print: paged
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE, comment = NA, warning = FALSE, message = FALSE,
                       options(digits = 3, scipen = 999))
 library(tidyverse)
-library(janitor)
-library(jtools)
-library(magrittr)
-library(plm)
-library(broom)
-library(kableExtra)
-library(AER)
-library(modelr)
 ```
 
-```{r}
-fish <- read_csv("fishdata.csv") %>% 
-  clean_names()
+```{r 3data}
+fish <- 
+  here::here("data", "fishdata.csv") %>% 
+  read_csv() %>% 
+  janitor::clean_names()
 ```
 
-### (a)
+## (a)
 
-```{r part_a}
+```{r 3a}
 curve(10*x^(-3/2), xlim = c(0, 10), ylim = c(0,4), 
       main = "Supply and Demand", xlab = "Quantity", ylab = "Price")
 
@@ -51,38 +46,39 @@ segments(x0 = -1, x1 = 60^(1/3), y0 = 20 * 60 ^ (-1/2), y1 = 20 * 60 ^ (-1/2),
 
 ```
 
-### (b)
+## (b)
 
-```{r}
-fish %$% 
-  lm(qty ~ price) %>% 
-  summ(digits = 4)
+```{r 3b}
+fish %>% 
+  lm(qty ~ price, .) %>% 
+  jtools::summ(digits = 4)
 ```
 
-### (c)
+## (c)
 
-```{r}
+```{r 3c}
 # First stage results
 fish %$% 
-  lm(price ~ stormy) %>% 
-  summ(digits = 4)
+  lm(price ~ stormy, .) %>% 
+  jtools::summ(digits = 4)
 
 fish %$% 
-  ivreg(qty ~ price | stormy) %>% 
+  AER::ivreg(qty ~ price | stormy, data = .) %>% 
   summary(digits = 4)
 ```
 
-### (d)
+## (d)
 
-```{r}
+```{r 3d}
 # first stage
-fish %$% 
-  lm(price ~ stormy + day1 + day2 + day3 + day4 + rainy + cold) %>% 
-  summ(digits = 4)
+fish %>% 
+  lm(price ~ stormy + day1 + day2 + day3 + day4 + rainy + cold, .) %>% 
+  jtools::summ(digits = 4)
 
-fish %$% 
-  ivreg(qty ~ price + day1 + day2 + day3 + day4 + cold + rainy | 
-          stormy + day1 + day2 + day3 + day4 + cold + rainy) %>% 
+fish %>% 
+  AER::ivreg(qty ~ price + day1 + day2 + day3 + day4 + cold + rainy | 
+          stormy + day1 + day2 + day3 + day4 + cold + rainy,
+        data = .) %>% 
   summary()
 
 ```
